@@ -156,6 +156,7 @@ class DiffusionPolicy(nn.Module):
                 model_kwargs = dict(z=z, x_mask=x_mask, cfg_scale=cfg_scale)
             sample_fn = self.net.forward_with_cfg
         else:
+            z = action_features
             if self.use_state == 'DiT':
                 model_kwargs = dict(z=z, x_mask=x_mask, state=current_state, state_mask=current_state_mask)
             else:
@@ -176,7 +177,7 @@ class DiffusionPolicy(nn.Module):
                 eta=0.0
             )
         else:
-            samples = self.ddim_diffusion.diffusion.p_sample_loop(
+            samples = self.diffusion.p_sample_loop(
                 sample_fn, 
                 noise.shape, 
                 noise, 
