@@ -176,7 +176,8 @@ class DiffusionPolicy(nn.Module):
                 eta=0.0
             )
         else:
-            samples = self.ddim_diffusion.diffusion.p_sample_loop(
+            # DDIM sampling uses `self.ddim_diffusion`, while ancestral sampling uses `self.diffusion`.
+            samples = self.diffusion.p_sample_loop(
                 sample_fn, 
                 noise.shape, 
                 noise, 
