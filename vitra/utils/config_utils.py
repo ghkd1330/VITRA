@@ -1,6 +1,12 @@
 import json
 import os
+from pathlib import Path
+
 from huggingface_hub import hf_hub_download
+
+# VITRA repository root (…/vitra/utils/config_utils.py → parents[2])
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 def deep_update(d1, d2):
     """Deep update d1 with d2, recursively merging nested dictionaries."""
@@ -11,6 +17,34 @@ def deep_update(d1, d2):
         else:
             d1[k] = d2[k]
     return d1
+
+
+def resolve_repo_paths(config: dict) -> None:
+    """Apply after CLI overrides so paths stay absolute relative to the repo root."""
+    _resolve_config_paths(config, REPO_ROOT)
+
+
+def _resolve_config_paths(config: dict, root: Path) -> None:
+    """Turn repo-relative paths under `weights/` into absolute paths so inference uses local files."""
+
+    def maybe_resolve(p: str) -> str:
+        if not isinstance(p, str) or not p:
+            return p
+        if os.path.isabs(p):
+            return p
+        candidate = (root / p).resolve()
+        if candidate.exists():
+            return str(candidate)
+        return p
+
+    for key in ("model_load_path", "statistics_path"):
+        if key in config and config[key]:
+            config[key] = maybe_resolve(config[key])
+    vlm = config.get("vlm")
+    if isinstance(vlm, dict):
+        pm = vlm.get("pretrained_model_name_or_path")
+        if pm:
+            vlm["pretrained_model_name_or_path"] = maybe_resolve(pm)
 
 
 def load_config(config_file):
@@ -44,4 +78,5 @@ def load_config(config_file):
     if _config.get("parent"):
         deep_update(config, load_config(_config["parent"]))
     deep_update(config, _config)
+    _resolve_config_paths(config, REPO_ROOT)
     return config

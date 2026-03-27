@@ -148,6 +148,15 @@ conda activate vitra
 pip install -e .
 ```
 
+**NVIDIA Blackwell (RTX 5090, sm_120):** The default `pip install -e .` pins PyTorch 2.3.x wheels that do not ship kernels for compute capability 12.0, which causes `CUDA error: no kernel image is available for execution on the device`. After installing the project, replace the PyTorch stack with official **CUDA 12.8** binaries (same model code and checkpoints; only the GPU runtime changes):
+
+```bash
+conda activate vitra
+bash scripts/install_pytorch_cuda128.sh
+```
+
+Use a recent NVIDIA driver that supports CUDA 12.8+. **PyTorch3D** (§1.2) must be **compiled with nvcc** against your PyTorch; otherwise imports work but you get `Not compiled with GPU support` during rendering. After upgrading PyTorch, run `bash scripts/install_pytorch_cuda128.sh` (it installs `cuda-nvcc` from conda if needed, sets include paths for pip `nvidia-*` headers such as `cusparse.h`, and rebuilds PyTorch3D when `scripts/check_pytorch3d_gpu.py` fails). For `undefined symbol` on import, the same script applies. Rebuild other CUDA extensions the same way if needed.
+
 <details>
 <summary>Click to view detailed system requirements</summary>
 
@@ -207,13 +216,16 @@ wget https://huggingface.co/spaces/rolpotamias/WiLoR/resolve/main/pretrained_mod
 wget https://huggingface.co/ThunderVVV/HaWoR/resolve/main/hawor/checkpoints/hawor.ckpt -P ./weights/hawor/checkpoints/
 ```
 
+For **offline hand reconstruction** (when no precomputed `.npy` exists next to the image), place the MoGe v2 weights at `weights/moge-2-vitl/model.pt` (same file as in the `Ruicheng/moge-2-vitl` Hugging Face repository).
+
 ---
 
 ## 2. Inference with Human Hand Image
-You can use our pretrained model to perform zero-shot 3D human hand action prediction directly from an **egocentric human hand image (landscape view)** based on instructions. To predict human actions from pre-captured images, please run [`scripts/run_human_inference.sh`](scripts/run_human_inference.sh). Here is a simple example:
+You can use our pretrained model to perform zero-shot 3D human hand action prediction directly from an **egocentric human hand image (landscape view)** based on instructions. Place checkpoints under `weights/` as follows: `weights/VITRA-VLA-3B/` (VLA checkpoint and statistics), `weights/paligemma2-3b-mix-224/` (backbone), plus HaWoR/MANO/MoGe paths above when running hand reconstruction.
+
+To predict human actions from pre-captured images, please run [`scripts/run_human_inference.sh`](scripts/run_human_inference.sh). The script defaults to `weights/VITRA-VLA-3B/configs/config.json` (no Hugging Face Hub access required). Example:
 ```bash
 python scripts/inference_human_prediction.py \
-    --config VITRA-VLA/VITRA-VLA-3B \
     --image_path ./examples/0002.jpg \
     --sample_times 4 \
     --save_state_local \
@@ -222,6 +234,7 @@ python scripts/inference_human_prediction.py \
     --mano_path ./weights/mano \
     --instruction "Left hand: None. Right hand: Pick up the picture of Michael Jackson." \
 ```
+To point to another JSON explicitly, use `--config` / `--config_path` (for example `./weights/VITRA-VLA-3B/configs/config.json`).
 All example images are captured on mobile phones in **rooms that do not appear anywhere in the V-L-A dataset**. They also include entirely **unseen concepts**, such as photos of celebrities.
 
 Users can capture images with their own devices and directly test the model using the recorded images.
@@ -246,14 +259,8 @@ from vitra.datasets.dataset_utils import (
     StateFeature,
 )
 
-# Load configs
-configs = load_config('VITRA-VLA/VITRA-VLA-3B')
-
-# Override config if provided
-pretrained_path = 'VITRA-VLA/VITRA-VLA-3B'
-statistics_path = 'VITRA-VLA/VITRA-VLA-3B'
-configs['model_load_path'] = pretrained_path
-configs['statistics_path'] = statistics_path
+# Load configs (local JSON under weights/; paths resolve to ./weights/... automatically)
+configs = load_config('weights/VITRA-VLA-3B/configs/config.json')
 
 # Load model and normalizer
 model = load_model(configs).cuda()

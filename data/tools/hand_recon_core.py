@@ -15,7 +15,7 @@ class Config:
         # --- Paths (Overridden by CLI arguments) ---
         self.HAWOR_MODEL_PATH = getattr(args, 'hawor_model_path', './weights/hawor/checkpoints/hawor.ckpt')
         self.DETECTOR_PATH = getattr(args, 'detector_path', './weights/hawor/external/detector.pt')
-        self.MOGE_MODEL_PATH = getattr(args, 'moge_model_path', 'Ruicheng/moge-2-vitl')
+        self.MOGE_MODEL_PATH = getattr(args, 'moge_model_path', './weights/moge-2-vitl/model.pt')
         self.MANO_PATH = getattr(args, 'mano_path', './weights/mano')
 
 
@@ -35,7 +35,7 @@ class HandReconstructor:
         Args:
             hawor_model_path (str): Path to the HaWoR model checkpoint.
             detector_path (str): Path to the hand detector weights.
-            moge_model_name (str): Name of the MoGe model for FoV estimation.
+            moge_model_path (str): Path to MoGe v2 `model.pt` or Hugging Face repo id (e.g. Ruicheng/moge-2-vitl).
             mano_path (str): Path to the MANO model weights.
             device (torch.device): Device to load models onto.
         """

@@ -1,5 +1,6 @@
 import os
 import copy
+import glob
 import json
 import torch
 import transformers
@@ -56,8 +57,16 @@ def load_model(configs):
             # If it's a file, load it directly
             checkpoint_path = model_load_path
         else:
-            # If it's a directory, look for weights.pt inside
-            checkpoint_path = os.path.join(model_load_path, "weights.pt")
+            # Local directory: prefer checkpoints/*.pt (e.g. VITRA release layout), then weights.pt
+            ckpt_dir = os.path.join(model_load_path, "checkpoints")
+            pts = []
+            if os.path.isdir(ckpt_dir):
+                pts = sorted(glob.glob(os.path.join(ckpt_dir, "*.pt")))
+            if pts:
+                vitra_pts = [p for p in pts if "vitra" in os.path.basename(p).lower()]
+                checkpoint_path = sorted(vitra_pts or pts)[0]
+            else:
+                checkpoint_path = os.path.join(model_load_path, "weights.pt")
         
         model = load_vla_checkpoint(model, checkpoint_path)
 

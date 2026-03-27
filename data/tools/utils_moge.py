@@ -1,8 +1,12 @@
 import cv2
 import numpy as np
 import torch
+from pathlib import Path
 
 from thirdparty.MoGe.moge.model.v2 import MoGeModel as MoGeModelV2
+
+# data/tools/utils_moge.py → VITRA repo root
+_REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 class MogePipeline:
@@ -23,7 +27,12 @@ class MogePipeline:
             device (torch.device): Device to load the model onto (e.g., 'cuda').
         """
         self.device = device
-        self.model = MoGeModelV2.from_pretrained(model_name).to(device)
+        resolved = model_name
+        if not Path(resolved).exists():
+            alt = _REPO_ROOT / model_name
+            if alt.exists():
+                resolved = str(alt)
+        self.model = MoGeModelV2.from_pretrained(resolved).to(device)
 
     def infer(self, input_image: np.ndarray) -> float:
         """

@@ -12,7 +12,7 @@ from pathlib import Path
 import multiprocessing as mp
 from vitra.models import VITRA_Paligemma, load_model
 from vitra.utils.data_utils import resize_short_side_to_target, load_normalizer, recon_traj
-from vitra.utils.config_utils import load_config
+from vitra.utils.config_utils import load_config, resolve_repo_paths
 from vitra.datasets.human_dataset import pad_state_human, pad_action
 from scipy.spatial.transform import Rotation as R
 from vitra.datasets.dataset_utils import (
@@ -22,7 +22,8 @@ from vitra.datasets.dataset_utils import (
     StateFeature,
 )
 
-repo_root = Path(__file__).parent.parent  # VITRA/
+repo_root = Path(__file__).resolve().parent.parent  # VITRA/
+_DEFAULT_CONFIG = str(repo_root / "weights" / "VITRA-VLA-3B" / "configs" / "config.json")
 sys.path.insert(0, str(repo_root))
 
 from visualization.visualize_core import HandVisualizer, normalize_camera_intrinsics, save_to_video, Renderer, process_single_hand_labels
@@ -57,7 +58,13 @@ def main():
     parser = argparse.ArgumentParser(description="Hand VLA inference and visualization.")
     
     # Model Configuration
-    parser.add_argument('--config_path', type=str, required=True, help='Path to model configuration JSON file')
+    parser.add_argument(
+        '--config_path',
+        '--config',
+        type=str,
+        default=_DEFAULT_CONFIG,
+        help='Path to model configuration JSON (default: weights/VITRA-VLA-3B/configs/config.json)',
+    )
     parser.add_argument('--model_path', type=str, default=None, help='Path to model checkpoint (overrides config)')
     parser.add_argument('--statistics_path', type=str, default=None, help='Path to normalization statistics JSON (overrides config)')
     
@@ -67,10 +74,15 @@ def main():
     parser.add_argument('--video_path', type=str, default='./example_human_inf.mp4', help='Path to save output visualization video')
     
     # Hand Reconstruction Models
-    parser.add_argument('--hawor_model_path', type=str, default='./weights/hawor/checkpoints/hawor.ckpt', help='Path to HAWOR model weights')
-    parser.add_argument('--detector_path', type=str, default='./weights/hawor/external/detector.pt', help='Path to hand detector model')
-    parser.add_argument('--moge_model_name', type=str, default='Ruicheng/moge-2-vitl', help='MOGE model name from Hugging Face')
-    parser.add_argument('--mano_path', type=str, default='/home/t-qixiuli/repo/VITRA/weights/mano', help='Path to MANO model files')
+    parser.add_argument('--hawor_model_path', type=str, default=str(repo_root / 'weights' / 'hawor' / 'checkpoints' / 'hawor.ckpt'), help='Path to HAWOR model weights')
+    parser.add_argument('--detector_path', type=str, default=str(repo_root / 'weights' / 'hawor' / 'external' / 'detector.pt'), help='Path to hand detector model')
+    parser.add_argument(
+        '--moge_model_path',
+        type=str,
+        default=str(repo_root / 'weights' / 'moge-2-vitl' / 'model.pt'),
+        help='Path to MoGe v2 checkpoint (model.pt); download Ruicheng/moge-2-vitl from Hugging Face into this path for offline use',
+    )
+    parser.add_argument('--mano_path', type=str, default=str(repo_root / 'weights' / 'mano'), help='Path to MANO model files')
     # parser.add_argument('--output_path', type=str, default='./recon_results.npy', help='Path to save reconstruction results')
     
     # Prediction Settings
@@ -101,6 +113,7 @@ def main():
         configs['model_load_path'] = args.model_path
     if args.statistics_path is not None:
         configs['statistics_path'] = args.statistics_path
+    resolve_repo_paths(configs)
 
     # Check if a precomputed hand reconstruction .npy (same stem as image) exists.
     image_path_obj = Path(args.image_path)
@@ -620,7 +633,7 @@ class HandReconstructionService:
         args_dict = {
             'hawor_model_path': args.hawor_model_path,
             'detector_path': args.detector_path,
-            'moge_model_name': args.moge_model_name,
+            'moge_model_path': args.moge_model_path,
             'mano_path': args.mano_path,
         }
         

@@ -24,7 +24,7 @@ class Config:
         self.VIDEO_ROOT = getattr(args, 'video_root', 'data/examples/videos')
         self.LABEL_ROOT = getattr(args, 'label_root', 'data/examples/annotations')
         self.SAVE_PATH = getattr(args, 'save_path', 'data/examples/visualize')
-        self.MANO_MODEL_PATH = getattr(args, 'mano_model_path', './weights/mano')
+        self.MANO_MODEL_PATH = getattr(args, 'mano_model_path', None) or getattr(args, 'mano_path', './weights/mano')
 
         # --- Fixed Parameters ---
         self.RENDER_SIZE_LONG_SIDE = 480
@@ -53,10 +53,12 @@ class HandVisualizer:
 
         # Initialize MANO and faces (use right hand model for both hands by default)
         self.mano = MANO(model_path=self.config.MANO_MODEL_PATH).cuda()
-        faces_right = torch.from_numpy(self.mano.faces).float().cuda()
-        # MANO faces are defined for right hand, left hand faces need vertex order flip
-        self.faces_left = faces_right[:, [0, 2, 1]]
-        self.faces_right = faces_right
+        # Reorder on CPU (NumPy) before .cuda(); CUDA advanced indexing can fail on GPUs
+        # whose arch is not supported by the installed PyTorch build (e.g. sm_120 on RTX 5090).
+        faces_np = np.asarray(self.mano.faces)
+        faces_left_np = faces_np[:, [0, 2, 1]]
+        self.faces_right = torch.from_numpy(faces_np).float().cuda()
+        self.faces_left = torch.from_numpy(faces_left_np).float().cuda()
 
     def _render_hand_trajectory(self, video_frames, hand_traj_wordspace, hand_mask, extrinsics, renderer: Renderer, mode: str):
         """
