@@ -194,3 +194,7 @@ benchmark*/
 .DS_Store
 
 weights/*
+
+data/fine-tuning-examples/*
+notes/*
+ISAACLAB_VITRA_QUEST3S_MASTER_PLAN.txt
