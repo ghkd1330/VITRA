@@ -193,4 +193,25 @@ benchmark*/
 
 .DS_Store
 
+# weights/
 weights/*
+
+# AI
+.cursor/
+
+# Private
+data/raw_sim/
+data/vitra_parent/TeleData/
+data/vitra_parent/*.json
+logs/
+outputs/
+checkpoints/
+*.mp4
+*.h5
+*.npz
+*.pt
+*.pth
+*.ckpt
+*.pyc
+ISAACLAB_VITRA_QUEST3S_MASTER_PLAN.txt
+notes/real_measurements.txt
